@@ -8,6 +8,8 @@
 - FastAPI backend is live on your machine with SQLite + image uploads, so every click already writes to `notes.db`.
 - Frontend pages (`index.html`, `category.html`) talk to the API through `frontend/app.js`; you proved it by running the static server and seeing categories load.
 - SQLite is acting as our “real-time” storage: as soon as you save a row, SQLAlchemy commits it to the local file and the UI re-fetches the fresh data.
+- Added user accounts with hashed passwords, session tokens, and a guarded UI so each student sees only their own categories.
+- Refreshed the landing page with signup/login cards, live auth state in the nav, and logout controls shared across screens.
 
 **What’s next**
 - Tweak the UI (layout, states, extra hints) while keeping the same API contract.
@@ -39,14 +41,14 @@ Keep updating this log each session so you can trace the learning journey like c
 | File | Why it exists |
 | --- | --- |
 | `backend/database.py` | Creates the SQLite engine, the SQLAlchemy `Base`, and the `get_db()` dependency injected into every route. |
-| `backend/models.py` | Declares `Category`, `Entry`, and `EntryImage` tables plus relationships (one category → many entries → many images). |
+| `backend/models.py` | Declares `User`, `SessionToken`, `Category`, `Entry`, and `EntryImage` tables plus relationships (users own categories; categories own entries/images). |
 | `backend/schemas.py` | Pydantic response models that guarantee FastAPI returns predictable JSON to the browser. |
 | `backend/main.py` | The FastAPI application: routes, image helpers, CRUD logic, and CORS/static-file setup. |
 | `backend/uploads/.gitkeep` | Keeps the folder committed even when empty so image uploads have a place to live. |
-| `frontend/index.html` | Landing page that lists every category and lets you create new ones. |
+| `frontend/index.html` | Landing/auth page: signup + login cards, workspace shell, and the category overview once signed in. |
 | `frontend/category.html` | Detail view with the editable table, image previews, and the entry form. |
 | `frontend/styles.css` | Defines the visual language (warm neutral palette, Space Grotesk type, responsive layout). |
-| `frontend/app.js` | Vanilla JS that fetches data, handles the forms, builds the tables, and calls image/entry APIs. |
+| `frontend/app.js` | Vanilla JS orchestrating auth (token storage, signup/login/logout) plus the existing category/entry CRUD calls. |
 | `requirements.txt` | Locked dependency list for the backend virtual environment. |
 | `NOTES.md` & `STEPS.md` | Teaching material: this file explains the architecture; `STEPS.md` is a hands-on run guide. |
 
@@ -54,15 +56,19 @@ Keep updating this log each session so you can trace the learning journey like c
 
 | Action | HTTP Method & Endpoint | Payload | Response |
 | --- | --- | --- | --- |
-| List categories | `GET /categories` | none | Array of `{id, name, entry_count}` displayed on landing page. |
-| Create category | `POST /categories` | JSON `{"name": "Furniture"}` | Newly created category JSON; page refreshes list. |
-| Get category detail | `GET /categories/{id}` | none | `{id, name, entries:[...]}` used to build the table. |
-| List entries only | `GET /categories/{id}/entries` | none | Used when you only need the rows. Frontend currently relies on detail endpoint, but both exist. |
-| Create entry | `POST /categories/{id}/entries` | `multipart/form-data` (text fields + `images[]`) | Entry JSON with image URLs so the table updates instantly. |
-| Update entry | `PUT /entries/{entry_id}` | `multipart/form-data` (same text fields, optional new images, `remove_image_ids`) | Updated entry JSON. |
-| Delete entry | `DELETE /entries/{entry_id}` | none | `{"message": "Entry deleted"}`; UI removes the row. |
-| Delete individual image | `DELETE /images/{image_id}` | none | `{"message": "Image deleted"}`; JS re-fetches the table. |
-| Delete category | `DELETE /categories/{id}` | none | `{"message": "Category deleted"}` plus cascaded removal of its entries/images. |
+| Sign up | `POST /signup` | JSON `{ "username", "password" }` | `{ token, user }` – browser stores the token for future calls. |
+| Log in | `POST /login` | JSON `{ "username", "password" }` | `{ token, user }` – identical format so the UI can reuse the handler. |
+| Fetch current user | `GET /me` | `Authorization: Bearer <token>` | `{ id, username }` – used on refresh to hydrate the nav. |
+| Log out | `POST /logout` | `Authorization: Bearer <token>` | `{"message": "Logged out"}` and the token is purged server-side. |
+| List categories | `GET /categories` | `Authorization` header | Array of `{id, name, entry_count}` scoped to the authenticated user. |
+| Create category | `POST /categories` | JSON `{"name": "Furniture"}` + `Authorization` | Newly created category JSON; page refreshes list. |
+| Get category detail | `GET /categories/{id}` | `Authorization` header | `{id, name, entries:[...]}` used to build the table. |
+| List entries only | `GET /categories/{id}/entries` | `Authorization` header | Used when you only need the rows. Frontend currently relies on detail endpoint, but both exist. |
+| Create entry | `POST /categories/{id}/entries` | `multipart/form-data` (text fields + `images[]`) + `Authorization` | Entry JSON with image URLs so the table updates instantly. |
+| Update entry | `PUT /entries/{entry_id}` | `multipart/form-data` (same text fields, optional new images, `remove_image_ids`) + `Authorization` | Updated entry JSON. |
+| Delete entry | `DELETE /entries/{entry_id}` | `Authorization` header | `{"message": "Entry deleted"}`; UI removes the row. |
+| Delete individual image | `DELETE /images/{image_id}` | `Authorization` header | `{"message": "Image deleted"}`; JS re-fetches the table. |
+| Delete category | `DELETE /categories/{id}` | `Authorization` header | `{"message": "Category deleted"}` plus cascaded removal of its entries/images. |
 
 **Why REST here?** Each action is clearly mapped to a verb, so you never wonder whether you need a custom RPC name. The browser-side code becomes predictable: inspect the verb and you already know what it will do.
 
@@ -77,6 +83,16 @@ Keep updating this log each session so you can trace the learning journey like c
 7. **Browser update:** the promise resolves, JS re-fetches the category detail, and rebuilds the table, so you see the new row and thumbnails.
 
 > Mental model: *Form → fetch → FastAPI route → SQLAlchemy session → SQLite file*. Once you rehearse that sentence a few times, debugging becomes easier because you know which hop to inspect.
+
+### Authentication loop (Sign up / Log in)
+
+1. **User fills signup/login card** on `index.html` (username + password).
+2. **`app.js` sends JSON** to `/signup` (or `/login`). These routes hash/verify the password and mint a session token stored in the `session_tokens` table.
+3. **Response returns `{token, user}`**; the frontend saves them in `localStorage`.
+4. **Every subsequent fetch** automatically adds `Authorization: Bearer <token>` so FastAPI can look up the session and user.
+5. **On refresh**, the app hits `/me` to validate the token before revealing the workspace. Invalid tokens trigger a toast and force re-login.
+
+> New mantra: *Credential form → `/login` → session token → Authorization header → user-scoped queries.*
 
 ## 5. HTTP Verb Cheat Sheet (Specific to This App)
 
@@ -99,6 +115,8 @@ Keep updating this log each session so you can trace the learning journey like c
 
 > **SQLite today, hosted DB tomorrow:** Right now FastAPI points at `sqlite:///./notes.db`, which is perfect for local practice. When you deploy (Vercel, Render, etc.), switch that URL to a managed Postgres/MySQL service, install the matching driver, and copy the same SQLAlchemy models over. The rest of the code—and even the frontend—stays identical.
 
+> **Schema refresh tip:** Whenever you add new tables/columns (like `users` and `session_tokens`), delete the existing `notes.db` so SQLAlchemy can recreate everything, or introduce Alembic migrations once you’re ready for production discipline.
+
 ### Stage C – Frontend Consumption
 - **What you learn:** DOM templating with `<template>`, FormData for file uploads, optimistic UI updates, error toasts.
 - **Common mistakes:** not clearing `FormData` between edits, forgetting to append `remove_image_ids` when updating, or assuming fetch errors throw automatically (hence the `safeFetch` helper).
@@ -108,6 +126,11 @@ Keep updating this log each session so you can trace the learning journey like c
 - **What you learn:** separating concerns (database layer vs. schema vs. API vs. static UI), keeping endpoints resource-focused, and serving static files (images) via FastAPI’s `StaticFiles` mount.
 - **Common mistakes:** mixing raw SQL queries scattered through route handlers or letting frontend hardcode DB logic. Keep layers talking only via APIs.
 - **Practice upgrade:** introduce authentication (even a simple API token) to feel how each layer adapts.
+
+### Stage E – Authentication & UX polish
+- **What you learn:** password hashing (Passlib), bearer token auth, protecting routes with dependencies, and mirroring auth state in the UI (nav, workspace gating, logout UX).
+- **Common mistakes:** storing plaintext passwords, forgetting to add the `Authorization` header on fetch calls, or not pruning expired tokens on logout.
+- **Practice upgrade:** add password reset or multi-device session listings, and replace localStorage tokens with HttpOnly cookies once you’re ready for stricter security.
 
 ## 7. Next Experiments
 

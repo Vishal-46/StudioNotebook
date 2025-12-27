@@ -3,6 +3,30 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class UserBase(BaseModel):
+    username: str
+
+
+class UserRead(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+
+
+class SignupRequest(UserBase):
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    token: str
+    user: UserRead
+
+
 class EntryImageRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

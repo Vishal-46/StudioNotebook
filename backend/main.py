@@ -4,19 +4,24 @@ from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
+import bcrypt
 
 from .database import Base, engine, get_db
-from .models import Category, Entry, EntryImage
+from .models import Category, Entry, EntryImage, SessionToken, User
 from .schemas import (
     CategoryCreate,
     CategoryDetail,
     CategoryRead,
+    AuthResponse,
     EntryImageRead,
     EntryRead,
+    LoginRequest,
+    SignupRequest,
+    UserRead,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -36,6 +41,119 @@ app.add_middleware(
 )
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
+def _hash_password(password: str) -> str:
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    return hashed.decode("utf-8")
+
+
+def _verify_password(password: str, password_hash: str) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+
+
+def _issue_token(user: User, db: Session) -> SessionToken:
+    token_value = uuid4().hex
+    session_token = SessionToken(token=token_value, user_id=user.id)
+    db.add(session_token)
+    db.commit()
+    db.refresh(session_token)
+    return session_token
+
+
+def _extract_token(authorization: Optional[str]) -> str:
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
+    return token
+
+
+def get_current_session(
+    authorization: Optional[str] = Header(None), db: Session = Depends(get_db)
+) -> SessionToken:
+    token_value = _extract_token(authorization)
+    session_token = db.query(SessionToken).filter(SessionToken.token == token_value).first()
+    if not session_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    return session_token
+
+
+def get_current_user(session_token: SessionToken = Depends(get_current_session)) -> User:
+    return session_token.user
+
+
+def _get_category_or_404(category_id: int, user: User, db: Session) -> Category:
+    category = (
+        db.query(Category)
+        .filter(Category.id == category_id, Category.user_id == user.id)
+        .first()
+    )
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return category
+
+
+def _get_entry_or_404(entry_id: int, user: User, db: Session) -> Entry:
+    entry = (
+        db.query(Entry)
+        .join(Category)
+        .filter(Entry.id == entry_id, Category.user_id == user.id)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return entry
+
+
+def _get_image_or_404(image_id: int, user: User, db: Session) -> EntryImage:
+    image = (
+        db.query(EntryImage)
+        .join(Entry)
+        .join(Category)
+        .filter(EntryImage.id == image_id, Category.user_id == user.id)
+        .first()
+    )
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return image
+
+
+@app.post("/signup", response_model=AuthResponse, status_code=201)
+def signup(payload: SignupRequest, db: Session = Depends(get_db)):
+    username_taken = db.query(User).filter(User.username == payload.username).first()
+    if username_taken:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    user = User(username=payload.username, password_hash=_hash_password(payload.password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    token = _issue_token(user, db)
+    return AuthResponse(token=token.token, user=UserRead(id=user.id, username=user.username))
+
+
+@app.post("/login", response_model=AuthResponse)
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == payload.username).first()
+    if not user or not _verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    token = _issue_token(user, db)
+    return AuthResponse(token=token.token, user=UserRead(id=user.id, username=user.username))
+
+
+@app.post("/logout")
+def logout(
+    session_token: SessionToken = Depends(get_current_session), db: Session = Depends(get_db)
+):
+    db.delete(session_token)
+    db.commit()
+    return {"message": "Logged out"}
+
+
+@app.get("/me", response_model=UserRead)
+def read_current_user(current_user: User = Depends(get_current_user)):
+    return UserRead(id=current_user.id, username=current_user.username)
 
 
 def _to_entry_schema(entry: Entry) -> EntryRead:
@@ -88,8 +206,15 @@ def healthcheck():
 
 
 @app.get("/categories", response_model=List[CategoryRead])
-def list_categories(db: Session = Depends(get_db)):
-    categories = db.query(Category).all()
+def list_categories(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    categories = (
+        db.query(Category)
+        .filter(Category.user_id == current_user.id)
+        .order_by(Category.id.desc())
+        .all()
+    )
     response: List[CategoryRead] = []
     for category in categories:
         response.append(
@@ -99,11 +224,19 @@ def list_categories(db: Session = Depends(get_db)):
 
 
 @app.post("/categories", response_model=CategoryRead, status_code=201)
-def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
-    name_exists = db.query(Category).filter(Category.name == payload.name).first()
+def create_category(
+    payload: CategoryCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    name_exists = (
+        db.query(Category)
+        .filter(Category.user_id == current_user.id, Category.name == payload.name)
+        .first()
+    )
     if name_exists:
         raise HTTPException(status_code=400, detail="Category name already exists")
-    category = Category(name=payload.name)
+    category = Category(name=payload.name, user_id=current_user.id)
     db.add(category)
     db.commit()
     db.refresh(category)
@@ -111,19 +244,23 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/categories/{category_id}", response_model=CategoryDetail)
-def get_category(category_id: int, db: Session = Depends(get_db)):
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+def get_category(
+    category_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    category = _get_category_or_404(category_id, current_user, db)
     entries = [_to_entry_schema(entry) for entry in category.entries]
     return CategoryDetail(id=category.id, name=category.name, entries=entries)
 
 
 @app.delete("/categories/{category_id}")
-def delete_category(category_id: int, db: Session = Depends(get_db)):
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+def delete_category(
+    category_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    category = _get_category_or_404(category_id, current_user, db)
     for entry in category.entries:
         for image in entry.images:
             _cleanup_image_file(image.file_path)
@@ -133,7 +270,12 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/categories/{category_id}/entries", response_model=List[EntryRead])
-def list_entries(category_id: int, db: Session = Depends(get_db)):
+def list_entries(
+    category_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _get_category_or_404(category_id, current_user, db)
     entries = (
         db.query(Entry)
         .filter(Entry.category_id == category_id)
@@ -152,11 +294,10 @@ async def create_entry(
     price: str = Form(""),
     notes: str = Form(""),
     images: Optional[List[UploadFile]] = File(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    category = db.query(Category).filter(Category.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
+    _get_category_or_404(category_id, current_user, db)
     price_value = float(price) if price not in (None, "") else None
     entry = Entry(
         category_id=category_id,
@@ -183,11 +324,10 @@ async def update_entry(
     notes: str = Form(""),
     images: Optional[List[UploadFile]] = File(None),
     remove_image_ids: str = Form(""),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    entry = db.query(Entry).filter(Entry.id == entry_id).first()
-    if not entry:
-        raise HTTPException(status_code=404, detail="Entry not found")
+    entry = _get_entry_or_404(entry_id, current_user, db)
 
     entry.item_type = item_type
     entry.name = name
@@ -209,10 +349,12 @@ async def update_entry(
 
 
 @app.delete("/entries/{entry_id}")
-def delete_entry(entry_id: int, db: Session = Depends(get_db)):
-    entry = db.query(Entry).filter(Entry.id == entry_id).first()
-    if not entry:
-        raise HTTPException(status_code=404, detail="Entry not found")
+def delete_entry(
+    entry_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    entry = _get_entry_or_404(entry_id, current_user, db)
     for image in entry.images:
         _cleanup_image_file(image.file_path)
     db.delete(entry)
@@ -221,10 +363,12 @@ def delete_entry(entry_id: int, db: Session = Depends(get_db)):
 
 
 @app.delete("/images/{image_id}")
-def delete_image(image_id: int, db: Session = Depends(get_db)):
-    image = db.query(EntryImage).filter(EntryImage.id == image_id).first()
-    if not image:
-        raise HTTPException(status_code=404, detail="Image not found")
+def delete_image(
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    image = _get_image_or_404(image_id, current_user, db)
     _cleanup_image_file(image.file_path)
     db.delete(image)
     db.commit()

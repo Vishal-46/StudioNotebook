@@ -1,6 +1,35 @@
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = (() => {
+    const FALLBACK = "http://127.0.0.1:8000";
+    if (window.location.protocol.startsWith("http")) {
+        const host = window.location.hostname || "127.0.0.1";
+        return `${window.location.protocol}//${host}:8000`;
+    }
+    return FALLBACK;
+})();
+const IS_FILE_PROTOCOL = window.location.protocol === "file:";
+const STORAGE_TOKEN_KEY = "studio-notes-token";
+const STORAGE_USER_KEY = "studio-notes-user";
 
 const toastEl = document.getElementById("toast");
+
+const state = {
+    token: localStorage.getItem(STORAGE_TOKEN_KEY) || "",
+    user: (() => {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_USER_KEY) || "null");
+        } catch (error) {
+            return null;
+        }
+    })(),
+};
+
+const workspaceMetrics = {
+    categories: 0,
+    entries: 0,
+    highlightName: "No boards yet",
+    highlightCount: 0,
+    latestCategoryId: null,
+};
 
 function showToast(message, isError = false) {
     if (!toastEl) return;
@@ -10,23 +39,233 @@ function showToast(message, isError = false) {
     setTimeout(() => toastEl.classList.remove("show"), 2600);
 }
 
-async function safeFetch(url, options = {}) {
-    try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            const detail = await response.json().catch(() => ({}));
-            const message = detail?.detail || detail?.message || "Request failed";
-            throw new Error(message);
+function notifyAuthChange() {
+    document.dispatchEvent(new CustomEvent("auth:changed", { detail: { user: state.user } }));
+}
+
+function updateWorkspaceHero(stats) {
+    if (stats) {
+        workspaceMetrics.categories = stats.categories ?? workspaceMetrics.categories;
+        workspaceMetrics.entries = stats.entries ?? workspaceMetrics.entries;
+        workspaceMetrics.highlightName = stats.highlightName ?? workspaceMetrics.highlightName;
+        workspaceMetrics.highlightCount = stats.highlightCount ?? workspaceMetrics.highlightCount;
+        workspaceMetrics.latestCategoryId = stats.latestCategoryId ?? workspaceMetrics.latestCategoryId;
+    }
+
+    const heroNameEl = document.getElementById("hero-username");
+    if (heroNameEl) {
+        heroNameEl.textContent = state.user ? state.user.username : "Designer";
+    }
+
+    const statCategoriesEl = document.getElementById("stat-categories");
+    const statEntriesEl = document.getElementById("stat-entries");
+    const statFocusCountEl = document.getElementById("stat-focus-count");
+    const statFocusLabelEl = document.getElementById("stat-focus-label");
+    const highlightNameEl = document.getElementById("stat-highlight-name");
+    const highlightCountEl = document.getElementById("stat-highlight-count");
+    const noteBodyEl = document.getElementById("workspace-note-body");
+
+    statCategoriesEl && (statCategoriesEl.textContent = workspaceMetrics.categories);
+    statEntriesEl && (statEntriesEl.textContent = workspaceMetrics.entries);
+    statFocusCountEl && (statFocusCountEl.textContent = workspaceMetrics.highlightCount);
+    statFocusLabelEl && (statFocusLabelEl.textContent = workspaceMetrics.highlightName);
+    highlightNameEl && (highlightNameEl.textContent = workspaceMetrics.highlightName);
+    highlightCountEl && (highlightCountEl.textContent = workspaceMetrics.highlightCount);
+
+    if (noteBodyEl) {
+        if (workspaceMetrics.entries === 0) {
+            noteBodyEl.textContent = "Sketch three starter boards: structure, envelope, interiors. Compare as you go.";
+        } else if (workspaceMetrics.entries < 6) {
+            noteBodyEl.textContent = "Add reference photos to each entry so juries can read the story in seconds.";
+        } else {
+            noteBodyEl.textContent = "You're tracking " + workspaceMetrics.entries + " specs. Tag costs to prep a budget narrative.";
         }
+    }
+}
+
+function updateShellVisibility() {
+    const navUsername = document.getElementById("nav-username");
+    const logoutBtn = document.getElementById("nav-logout");
+    const appShell = document.getElementById("app-shell");
+    const authInvite = document.getElementById("auth-invite");
+    const welcomeEl = document.getElementById("app-welcome");
+    const publicHero = document.getElementById("public-hero");
+    const workspaceHero = document.getElementById("workspace-hero");
+
+    if (navUsername) {
+        navUsername.textContent = state.user ? `@${state.user.username}` : "Guest";
+    }
+    if (logoutBtn) {
+        logoutBtn.classList.toggle("hidden", !state.user);
+    }
+    if (appShell && authInvite) {
+        appShell.classList.toggle("hidden", !state.user);
+        authInvite.classList.toggle("hidden", !!state.user);
+    }
+    if (welcomeEl && state.user) {
+        welcomeEl.textContent = `Hi ${state.user.username}, your workspace is ready.`;
+    }
+    if (publicHero && workspaceHero) {
+        publicHero.classList.toggle("hidden", !!state.user);
+        workspaceHero.classList.toggle("hidden", !state.user);
+    }
+    updateWorkspaceHero();
+}
+
+function persistAuth(token, user, { silent = false } = {}) {
+    state.token = token;
+    state.user = user;
+    localStorage.setItem(STORAGE_TOKEN_KEY, token);
+    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+    updateShellVisibility();
+    notifyAuthChange();
+    if (!silent) {
+        showToast(`Welcome, ${user.username}!`);
+        document.getElementById("workspace-hero")?.scrollIntoView({ behavior: "smooth" });
+    }
+}
+
+function clearAuth(silent = false) {
+    const hadUser = Boolean(state.user);
+    state.token = "";
+    state.user = null;
+    localStorage.removeItem(STORAGE_TOKEN_KEY);
+    localStorage.removeItem(STORAGE_USER_KEY);
+    updateShellVisibility();
+    notifyAuthChange();
+    updateWorkspaceHero({
+        categories: 0,
+        entries: 0,
+        highlightName: "No boards yet",
+        highlightCount: 0,
+        latestCategoryId: null,
+    });
+    if (hadUser && !silent) {
+        showToast("Signed out");
+    }
+}
+
+function redirectToLanding() {
+    window.location.href = "index.html";
+}
+
+async function safeFetch(url, options = {}) {
+    const config = { ...options };
+    const skipAuth = Boolean(config.skipAuth);
+    const muteErrors = Boolean(config.muteErrors);
+    delete config.skipAuth;
+    delete config.muteErrors;
+
+    if (IS_FILE_PROTOCOL) {
+        const message = "Run a local HTTP server (python -m http.server 5500) and open http://127.0.0.1:5500 to use the API.";
+        if (!muteErrors) {
+            showToast(message, true);
+        }
+        throw new Error(message);
+    }
+
+    const headers = new Headers(config.headers || {});
+    if (!skipAuth && state.token) {
+        headers.set("Authorization", `Bearer ${state.token}`);
+    }
+    config.headers = headers;
+
+    let response;
+    try {
+        response = await fetch(url, config);
+    } catch (networkError) {
+        if (!muteErrors) {
+            showToast("Network error. Please try again.", true);
+        }
+        throw networkError;
+    }
+
+    if (!response.ok) {
+        let message = "Request failed";
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
-            return response.json();
+            const detail = await response.json().catch(() => ({}));
+            message = detail?.detail || detail?.message || message;
         }
-        return response;
-    } catch (error) {
-        showToast(error.message, true);
-        throw error;
+        if (response.status === 401) {
+            message = "Session expired. Please sign in again.";
+            clearAuth(true);
+        }
+        if (!muteErrors) {
+            showToast(message, true);
+        }
+        throw new Error(message);
     }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+        return response.json();
+    }
+    return response;
+}
+
+function formToObject(form) {
+    const formData = new FormData(form);
+    return Object.fromEntries(formData.entries());
+}
+
+function wireAuthForms() {
+    const signupForm = document.getElementById("signup-form");
+    const loginForm = document.getElementById("login-form");
+
+    signupForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const payload = formToObject(signupForm);
+        payload.username = payload.username.trim();
+        if (payload.username.length < 3) {
+            showToast("Username should be at least 3 characters", true);
+            return;
+        }
+        if ((payload.password || "").length < 6) {
+            showToast("Password should be at least 6 characters", true);
+            return;
+        }
+        const response = await safeFetch(`${API_BASE}/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            skipAuth: true,
+        });
+        signupForm.reset();
+        persistAuth(response.token, response.user);
+    });
+
+    loginForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const payload = formToObject(loginForm);
+        const response = await safeFetch(`${API_BASE}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            skipAuth: true,
+        });
+        loginForm.reset();
+        persistAuth(response.token, response.user);
+    });
+}
+
+function setupLogoutButton() {
+    const logoutBtn = document.getElementById("nav-logout");
+    if (!logoutBtn) return;
+    logoutBtn.addEventListener("click", async () => {
+        if (!state.token) {
+            showToast("You are not signed in yet.", true);
+            return;
+        }
+        try {
+            await safeFetch(`${API_BASE}/logout`, { method: "POST" });
+        } catch (error) {
+            // Already handled by safeFetch
+        } finally {
+            clearAuth();
+            redirectToLanding();
+        }
+    });
 }
 
 function initCategoriesPage() {
@@ -36,13 +275,39 @@ function initCategoriesPage() {
     const refreshBtn = document.getElementById("refresh-categories");
 
     async function loadCategories() {
+        if (!state.user) {
+            listEl.innerHTML = "<p class='empty-state'>Sign in to see your categories.</p>";
+            updateWorkspaceHero({
+                categories: 0,
+                entries: 0,
+                highlightName: "Start your first board",
+                highlightCount: 0,
+                latestCategoryId: null,
+            });
+            return;
+        }
         listEl.innerHTML = "<p class='empty-state'>Loading...</p>";
         const categories = await safeFetch(`${API_BASE}/categories`);
         if (!categories.length) {
             listEl.innerHTML = "<p class='empty-state'>No categories yet. Start by adding one.</p>";
+            updateWorkspaceHero({
+                categories: 0,
+                entries: 0,
+                highlightName: "Start your first board",
+                highlightCount: 0,
+                latestCategoryId: null,
+            });
             return;
         }
         listEl.innerHTML = "";
+        const statsPayload = {
+            categories: categories.length,
+            entries: categories.reduce((sum, category) => sum + (category.entry_count || 0), 0),
+            highlightName: categories[0]?.name || "Fresh board",
+            highlightCount: categories[0]?.entry_count || 0,
+            latestCategoryId: categories[0]?.id ?? null,
+        };
+        updateWorkspaceHero(statsPayload);
         categories.forEach((category) => {
             const node = template.content.firstElementChild.cloneNode(true);
             node.querySelector(".category-card__title").textContent = category.name;
@@ -56,6 +321,10 @@ function initCategoriesPage() {
 
     formEl?.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!state.user) {
+            showToast("Please log in first.", true);
+            return;
+        }
         const formData = new FormData(formEl);
         const payload = Object.fromEntries(formData.entries());
         if (!payload.name?.trim()) {
@@ -74,7 +343,37 @@ function initCategoriesPage() {
 
     refreshBtn?.addEventListener("click", loadCategories);
 
-    loadCategories();
+    document.addEventListener("auth:changed", () => {
+        updateShellVisibility();
+        if (state.user) {
+            loadCategories();
+        } else {
+            listEl.innerHTML = "<p class='empty-state'>Sign in to see your categories.</p>";
+        }
+    });
+
+    updateShellVisibility();
+    if (state.user) {
+        loadCategories();
+    } else {
+        listEl.innerHTML = "<p class='empty-state'>Sign in to see your categories.</p>";
+    }
+}
+
+function setupWorkspaceActions() {
+    const latestBtn = document.getElementById("open-latest-board");
+    if (!latestBtn) return;
+    latestBtn.addEventListener("click", () => {
+        if (!state.user) {
+            showToast("Please log in first.", true);
+            return;
+        }
+        if (!workspaceMetrics.latestCategoryId) {
+            showToast("Create a board to open it.", true);
+            return;
+        }
+        window.location.href = `category.html?id=${workspaceMetrics.latestCategoryId}`;
+    });
 }
 
 function initCategoryDetailPage() {
@@ -90,6 +389,12 @@ function initCategoryDetailPage() {
     const cancelBtn = document.getElementById("entry-cancel-btn");
     const categoryTitle = document.getElementById("category-title");
     const categorySummary = document.getElementById("category-summary");
+
+    if (!state.user) {
+        showToast("Please log in to view categories", true);
+        window.location.href = "index.html";
+        return;
+    }
 
     if (!categoryId) {
         categoryTitle.textContent = "Category missing";
@@ -248,9 +553,32 @@ function initCategoryDetailPage() {
     loadCategory();
 }
 
-function init() {
+async function bootstrapAuth() {
+    if (!state.token) {
+        updateShellVisibility();
+        return;
+    }
+    try {
+        const user = await safeFetch(`${API_BASE}/me`, { muteErrors: true });
+        if (user) {
+            persistAuth(state.token, user, { silent: true });
+        }
+    } catch (error) {
+        // Already handled by safeFetch
+    } finally {
+        updateShellVisibility();
+    }
+}
+
+async function init() {
+    updateShellVisibility();
+    await bootstrapAuth();
+    setupLogoutButton();
+    setupWorkspaceActions();
+
     const page = document.body.dataset.page;
     if (page === "categories") {
+        wireAuthForms();
         initCategoriesPage();
     }
     if (page === "category-detail") {

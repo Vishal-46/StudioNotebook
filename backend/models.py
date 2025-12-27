@@ -1,14 +1,50 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from .database import Base
 
 
-class Category(Base):
-    __tablename__ = "categories"
+class User(Base):
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False)
+    username = Column(String(80), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    categories = relationship(
+        "Category",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="Category.id",
+    )
+    tokens = relationship(
+        "SessionToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="SessionToken.created_at",
+    )
+
+
+class SessionToken(Base):
+    __tablename__ = "session_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="tokens")
+
+
+class Category(Base):
+    __tablename__ = "categories"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_category_user_name"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     entries = relationship(
         "Entry",
@@ -16,6 +52,7 @@ class Category(Base):
         cascade="all, delete-orphan",
         order_by="Entry.id",
     )
+    user = relationship("User", back_populates="categories")
 
 
 class Entry(Base):

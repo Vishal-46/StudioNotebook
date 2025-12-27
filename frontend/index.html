@@ -7,38 +7,155 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-page="categories">
-    <header class="hero">
-        <div class="hero__content">
-            <p class="eyebrow">Studio Notebook</p>
-            <h1>Organize your architecture study notes with calm structure.</h1>
-            <p class="subtitle">
-                Create categories for building systems, materials, furniture standards, or any revision topic.
-                Each category becomes a living table of the specs you care about.
-            </p>
+    <nav class="top-bar">
+        <div class="brand">
+            <span class="brand__mark"></span>
+            <div>
+                <p class="eyebrow">Studio Notebook</p>
+                <strong>Architecture Notes</strong>
+            </div>
         </div>
-        <div class="hero__panel">
-            <h2>Add a Category</h2>
-            <form id="category-form" class="form__stack">
-                <label>
-                    Category Name
-                    <input type="text" name="name" placeholder="eg. Concrete Mixes" required />
-                </label>
-                <button type="submit" class="btn primary">Save Category</button>
-                <p class="form__hint">Keep names short and precise so they read well on the board.</p>
-            </form>
+        <div class="top-bar__actions" id="nav-auth">
+            <p id="nav-username" class="muted"></p>
+            <button id="nav-logout" class="btn ghost small">Log out</button>
+        </div>
+    </nav>
+
+    <header id="public-hero" class="hero hero--split">
+        <div class="hero__content">
+            <p class="eyebrow">Study OS</p>
+            <h1>Build a calm archive for every studio crit and exam.</h1>
+            <p class="subtitle">
+                Draft categories for systems, furniture, materials, precedent studies, and keep their specs, prices,
+                and image references ready for your next review.
+            </p>
+            <ul class="hero__bullets">
+                <li>Personal dashboards per user</li>
+                <li>Structured tables with upload-ready rows</li>
+                <li>Instant sync thanks to FastAPI + SQLite</li>
+            </ul>
+        </div>
+        <div class="auth-stack">
+            <section class="auth-card">
+                <h2>Create an account</h2>
+                <p class="muted">One username is enough to keep your boards separate from classmates.</p>
+                <form id="signup-form" class="form__stack">
+                    <label>
+                        Username
+                        <input type="text" name="username" placeholder="eg. studio_ava" required />
+                    </label>
+                    <label>
+                        Password
+                        <input type="password" name="password" placeholder="At least 6 characters" required />
+                    </label>
+                    <button type="submit" class="btn primary">Sign up &amp; continue</button>
+                </form>
+            </section>
+            <section class="auth-card">
+                <h2>Sign in</h2>
+                <p class="muted">Already built boards? Drop back into them here.</p>
+                <form id="login-form" class="form__stack">
+                    <label>
+                        Username
+                        <input type="text" name="username" placeholder="Your username" required />
+                    </label>
+                    <label>
+                        Password
+                        <input type="password" name="password" placeholder="Your password" required />
+                    </label>
+                    <button type="submit" class="btn secondary">Log in</button>
+                </form>
+            </section>
         </div>
     </header>
 
-    <main>
-        <section class="panel">
+    <section id="workspace-hero" class="hero hero--dashboard hidden">
+        <div class="hero__content">
+            <p class="eyebrow">Workspace live</p>
+            <h1>Glad you're back, <span id="hero-username">Designer</span>.</h1>
+            <p class="subtitle">
+                Keep your construction sets, material tests, and pricing snippets aligned. Track the flow of entries and
+                jump straight into the freshest board without digging through folders.
+            </p>
+            <ul class="pulse-list">
+                <li>
+                    <strong>Latest board</strong>
+                    <p><span id="stat-highlight-name">No boards yet</span> · <span id="stat-highlight-count">0</span> entries captured.</p>
+                </li>
+                <li>
+                    <strong>Status</strong>
+                    <p>FastAPI just synced your private archive. Nothing is shared unless you export it.</p>
+                </li>
+            </ul>
+            <div class="cta-row">
+                <a class="btn primary" href="#category-form">Add new board</a>
+                <button id="open-latest-board" class="btn ghost">Open latest board</button>
+            </div>
+        </div>
+        <div class="workspace-panel">
+            <div class="stat-grid">
+                <article class="stat-card">
+                    <p class="eyebrow">Categories</p>
+                    <p class="stat-card__value" id="stat-categories">0</p>
+                    <p class="muted">Active boards</p>
+                </article>
+                <article class="stat-card">
+                    <p class="eyebrow">Entries</p>
+                    <p class="stat-card__value" id="stat-entries">0</p>
+                    <p class="muted">Specs + imagery</p>
+                </article>
+                <article class="stat-card">
+                    <p class="eyebrow">Focus</p>
+                    <p class="stat-card__value" id="stat-focus-count">0</p>
+                    <p class="muted" id="stat-focus-label">Start your first board</p>
+                </article>
+            </div>
+            <div class="workspace-note">
+                <p class="eyebrow">Field note</p>
+                <p id="workspace-note-body">
+                    Build theme-based boards (structure, envelope, interiors) to keep juries oriented during crits.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <main class="main-flow">
+        <section id="auth-invite" class="panel">
+            <p class="eyebrow">Workspace locked</p>
+            <h3>Log in to reveal your categories.</h3>
+            <p class="subtitle">
+                Every plan board is private to its owner. Once authenticated, this section morphs into your personal
+                control center with forms and tables.
+            </p>
+        </section>
+
+        <section id="app-shell" class="panel app-shell hidden">
             <div class="panel__header">
                 <div>
-                    <p class="eyebrow">Categories</p>
-                    <h3>Pick a board to open its entries.</h3>
+                    <p class="eyebrow">Workspace</p>
+                    <h3 id="app-welcome">Welcome back</h3>
                 </div>
                 <button id="refresh-categories" class="btn ghost">Refresh</button>
             </div>
-            <div id="category-list" class="category-grid"></div>
+            <div class="app-shell__grid">
+                <form id="category-form" class="form__stack card">
+                    <h4>Add a Category</h4>
+                    <label>
+                        Category Name
+                        <input type="text" name="name" placeholder="eg. Concrete Mixes" required />
+                    </label>
+                    <button type="submit" class="btn primary">Save Category</button>
+                    <p class="form__hint">Use short, action-oriented titles so they remain scannable.</p>
+                </form>
+
+                <div>
+                    <div class="panel__subheader">
+                        <p class="eyebrow">Your boards</p>
+                        <h4>Tap to open the detailed table.</h4>
+                    </div>
+                    <div id="category-list" class="category-grid"></div>
+                </div>
+            </div>
         </section>
     </main>
 

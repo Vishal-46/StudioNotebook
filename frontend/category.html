@@ -7,9 +7,25 @@
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-page="category-detail">
+    <nav class="top-bar">
+        <div class="brand">
+            <span class="brand__mark"></span>
+            <div>
+                <p class="eyebrow">Studio Notebook</p>
+                <strong>Architecture Notes</strong>
+            </div>
+        </div>
+        <div class="top-bar__actions" id="nav-auth">
+            <p id="nav-username" class="muted"></p>
+            <div class="top-bar__cta">
+                <a href="./index.html" class="btn ghost">Boards</a>
+                <button id="nav-logout" class="btn ghost small">Log out</button>
+            </div>
+        </div>
+    </nav>
+
     <header class="sub-hero">
         <div>
-            <a href="./index.html" class="btn ghost">&#8592; Back to categories</a>
             <p class="eyebrow">Category</p>
             <h1 id="category-title">Loading...</h1>
             <p class="subtitle" id="category-summary">

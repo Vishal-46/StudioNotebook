@@ -15,12 +15,18 @@
     box-sizing: border-box;
 }
 
+html {
+    width: 100%;
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
     font-family: "Space Grotesk", "Inter", sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .top-bar {
@@ -475,5 +481,164 @@ tr:last-child td {
 
     .sticky {
         position: static;
+    }
+}
+
+@media (max-width: 720px) {
+    .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+    }
+
+    .top-bar__actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .top-bar__cta {
+        width: 100%;
+        gap: 0.5rem;
+        justify-content: flex-start;
+    }
+
+    .top-bar__cta .btn {
+        flex: 1;
+    }
+
+    .hero,
+    .sub-hero {
+        padding: 2rem 1rem 1.5rem;
+        grid-template-columns: 1fr;
+    }
+
+    main {
+        padding: 0.5rem 1rem 2rem;
+    }
+
+    .panel,
+    .workspace-panel,
+    .card {
+        padding: 1rem;
+        border-radius: 1rem;
+    }
+
+    .category-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+    }
+
+    .app-shell__grid,
+    .auth-stack {
+        grid-template-columns: 1fr;
+    }
+
+    .table-wrapper {
+        margin: 0 -0.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    table,
+    thead,
+    tbody,
+    th,
+    td,
+    tr {
+        display: block;
+    }
+
+    thead {
+        position: absolute;
+        left: -9999px;
+        opacity: 0;
+    }
+
+    tbody tr {
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 0.9rem;
+        margin-bottom: 1rem;
+        background: #fffefa;
+    }
+
+    tbody td {
+        border: none;
+        padding: 0.4rem 0;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--muted);
+        flex: 0 0 45%;
+    }
+
+    tbody td[data-cell="images"] {
+        flex-direction: column;
+    }
+
+    .table-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn.small {
+        width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    body {
+        font-size: 0.95rem;
+    }
+
+    .top-bar {
+        padding: 0.8rem 0.9rem;
+    }
+
+    .top-bar__actions,
+    .top-bar__cta {
+        gap: 0.4rem;
+    }
+
+    .top-bar__cta .btn {
+        flex: auto;
+        min-width: calc(50% - 0.5rem);
+    }
+
+    .panel,
+    .workspace-panel,
+    .card,
+    .table-wrapper,
+    main,
+    .hero,
+    .sub-hero {
+        margin: 0;
+        padding-left: 0.8rem;
+        padding-right: 0.8rem;
+    }
+
+    .table-wrapper {
+        margin: 0;
+    }
+
+    .cta-row {
+        flex-direction: column;
+    }
+
+    tbody td {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    tbody td::before {
+        flex: 0 0 auto;
     }
 }

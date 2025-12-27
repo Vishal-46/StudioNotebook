@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Architecture Notes | Categories</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="categories">
+    <header class="hero">
+        <div class="hero__content">
+            <p class="eyebrow">Studio Notebook</p>
+            <h1>Organize your architecture study notes with calm structure.</h1>
+            <p class="subtitle">
+                Create categories for building systems, materials, furniture standards, or any revision topic.
+                Each category becomes a living table of the specs you care about.
+            </p>
+        </div>
+        <div class="hero__panel">
+            <h2>Add a Category</h2>
+            <form id="category-form" class="form__stack">
+                <label>
+                    Category Name
+                    <input type="text" name="name" placeholder="eg. Concrete Mixes" required />
+                </label>
+                <button type="submit" class="btn primary">Save Category</button>
+                <p class="form__hint">Keep names short and precise so they read well on the board.</p>
+            </form>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel">
+            <div class="panel__header">
+                <div>
+                    <p class="eyebrow">Categories</p>
+                    <h3>Pick a board to open its entries.</h3>
+                </div>
+                <button id="refresh-categories" class="btn ghost">Refresh</button>
+            </div>
+            <div id="category-list" class="category-grid"></div>
+        </section>
+    </main>
+
+    <template id="category-card-template">
+        <article class="category-card">
+            <div>
+                <p class="category-card__title"></p>
+                <p class="category-card__count"></p>
+            </div>
+            <a class="btn secondary" href="#">Open</a>
+        </article>
+    </template>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js" type="module"></script>
+</body>
+</html>

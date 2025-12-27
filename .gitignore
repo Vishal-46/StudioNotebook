@@ -1,2 +1,9 @@
-.env
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+.venv/
+notes.db
+backend/uploads/*
+!.gitkeep

@@ -1,1 +1,0 @@
-#### Poetry - Dependecies Manager (Python)

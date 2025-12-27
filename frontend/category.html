@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Category Detail | Architecture Notes</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="category-detail">
+    <header class="sub-hero">
+        <div>
+            <a href="./index.html" class="btn ghost">&#8592; Back to categories</a>
+            <p class="eyebrow">Category</p>
+            <h1 id="category-title">Loading...</h1>
+            <p class="subtitle" id="category-summary">
+                Fetching entries and images. Hang tight for a moment.
+            </p>
+        </div>
+    </header>
+
+    <main class="grid-two">
+        <section class="panel">
+            <div class="panel__header">
+                <div>
+                    <p class="eyebrow">Entries</p>
+                    <h3>Specifications collected so far</h3>
+                </div>
+                <button id="refresh-entries" class="btn ghost">Refresh</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Dimensions</th>
+                            <th>Price</th>
+                            <th>Sample Images</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entries-table">
+                        <tr>
+                            <td colspan="7" class="empty-state">Loading entries...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel sticky">
+            <h3 id="entry-form-title">Add Entry</h3>
+            <form id="entry-form" class="form__stack" enctype="multipart/form-data">
+                <input type="hidden" name="entryId" id="entry-id" />
+                <label>
+                    Type
+                    <input type="text" name="item_type" placeholder="Material, Furniture, Detail" required />
+                </label>
+                <label>
+                    Name
+                    <input type="text" name="name" placeholder="eg. Eames Lounge Chair" required />
+                </label>
+                <label>
+                    Dimensions
+                    <input type="text" name="dimensions" placeholder="Length × Width × Height" />
+                </label>
+                <label>
+                    Price (optional)
+                    <input type="number" step="0.01" name="price" placeholder="eg. 1200" />
+                </label>
+                <label>
+                    Notes
+                    <textarea name="notes" rows="3" placeholder="Highlight specifications, sourcing notes, etc."></textarea>
+                </label>
+                <label>
+                    Sample Images
+                    <input type="file" name="images" id="entry-images" accept="image/*" multiple />
+                </label>
+                <button type="submit" class="btn primary" id="entry-submit-btn">Save Entry</button>
+                <button type="button" class="btn ghost" id="entry-cancel-btn">Clear Form</button>
+                <p class="form__hint">
+                    Upload sketches, catalog shots, or construction progress photos.
+                    Thumbnails appear instantly once the save call finishes.
+                </p>
+            </form>
+        </section>
+    </main>
+
+    <template id="entry-row-template">
+        <tr>
+            <td data-cell="type"></td>
+            <td data-cell="name"></td>
+            <td data-cell="dimensions"></td>
+            <td data-cell="price"></td>
+            <td data-cell="images"></td>
+            <td data-cell="notes"></td>
+            <td data-cell="actions"></td>
+        </tr>
+    </template>
+
+    <template id="image-chip-template">
+        <div class="image-chip">
+            <img src="" alt="Entry" />
+            <button type="button" class="btn icon" title="Delete image">✕</button>
+        </div>
+    </template>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js" type="module"></script>
+</body>
+</html>

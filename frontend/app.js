@@ -1,5 +1,5 @@
 const API_BASE = (() => {
-    const FALLBACK = "http://127.0.0.1:8000";
+    const FALLBACK = "https://studionotebook.onrender.com";
     if (window.location.protocol.startsWith("http")) {
         const host = window.location.hostname || "127.0.0.1";
         return `${window.location.protocol}//${host}:8000`;

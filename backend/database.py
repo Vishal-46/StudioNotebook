@@ -1,11 +1,18 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from .config import settings
 
-DATABASE_URL = "sqlite:///./notes.db"
+# If SUPABASE_URL is provided, use it (PostgreSQL). Otherwise fallback to SQLite.
+if settings.SUPABASE_URL and "postgresql" in settings.DATABASE_URL:
+    DATABASE_URL = settings.DATABASE_URL
+    connect_args = {}
+else:
+    DATABASE_URL = "sqlite:///./notes.db"
+    connect_args = {"check_same_thread": False}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},  # Needed for SQLite + threads
+    connect_args=connect_args,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

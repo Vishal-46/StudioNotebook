@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings | StudioNotebook</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="settings">
+    <nav class="top-bar">
+        <div class="brand">
+            <img src="StudioNotebook_Logo.png" alt="StudioNotebook logo" class="brand__logo" />
+            <div>
+                <p class="eyebrow">Studio Notebook</p>
+                <strong>Architecture Notes</strong>
+            </div>
+        </div>
+        <div class="top-bar__actions" id="nav-auth">
+            <p id="nav-username" class="muted"></p>
+            <div class="top-bar__cta">
+                <a href="./index.html" class="btn ghost">Dashboard</a>
+                <button id="nav-logout" class="btn ghost small">Log out</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="sub-hero">
+        <div class="header-nav">
+            <a href="index.html" class="nav-link">← Back to Dashboard</a>
+        </div>
+        <div>
+            <p class="eyebrow">User</p>
+            <h1>Settings</h1>
+            <p class="subtitle">Manage your profile and security settings.</p>
+        </div>
+    </header>
+
+    <main class="settings-container">
+        <section class="panel">
+            <h3>Profile Information</h3>
+            <p class="muted">Update your studio identity.</p>
+            <form id="profile-form" class="form__stack">
+                <label>
+                    Username
+                    <input type="text" name="username" id="settings-username" required />
+                </label>
+                <label>
+                    Email
+                    <input type="email" name="email" id="settings-email" required />
+                </label>
+                <div class="cta-row">
+                    <button type="submit" class="btn primary">Update Profile</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h3>Security</h3>
+            <p class="muted">Change your password to keep your projects secure.</p>
+            <form id="password-form" class="form__stack">
+                <label>
+                    New Password
+                    <input type="password" name="password" placeholder="At least 8 characters" required />
+                </label>
+                <label>
+                    Confirm New Password
+                    <input type="password" name="confirm_password" placeholder="Repeat new password" required />
+                </label>
+                <div class="cta-row">
+                    <button type="submit" class="btn secondary">Update Password</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel" style="border-top: 5px solid #ff4444;">
+            <h3 style="color: #ff4444;">Danger Zone</h3>
+            <p class="muted">Requests to delete accounts or transfer data must be handled via support for now.</p>
+            <button class="btn ghost small" disabled>Delete Account</button>
+        </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!state.user) {
+                window.location.href = "index.html";
+                return;
+            }
+            
+            const usernameInput = document.getElementById("settings-username");
+            const emailInput = document.getElementById("settings-email");
+            const profileForm = document.getElementById("profile-form");
+            const passwordForm = document.getElementById("password-form");
+
+            usernameInput.value = state.user.username;
+            emailInput.value = state.user.email;
+
+            profileForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const payload = {
+                    username: usernameInput.value.trim(),
+                    email: emailInput.value.trim()
+                };
+                
+                try {
+                    const updatedUser = await safeFetch(`${API_BASE}/me`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    persistAuth(updatedUser, state.csrf, { silent: true });
+                    showToast("Profile updated successfully");
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+
+            passwordForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const pass = passwordForm.password.value;
+                const confirm = passwordForm.confirm_password.value;
+
+                if (pass !== confirm) {
+                    showToast("Passwords do not match", true);
+                    return;
+                }
+
+                if (pass.length < 8) {
+                    showToast("Password must be at least 8 characters", true);
+                    return;
+                }
+
+                try {
+                    await safeFetch(`${API_BASE}/me`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ password: pass })
+                    });
+                    passwordForm.reset();
+                    showToast("Password updated successfully");
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

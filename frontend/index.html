@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Architecture Notes | Categories</title>
+    <title>StudioNotebook | Dashboard</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
-<body data-page="categories">
+<body data-page="dashboard">
     <nav class="top-bar">
         <div class="brand">
             <img src="StudioNotebook_Logo.png" alt="StudioNotebook logo" class="brand__logo" />
@@ -17,103 +17,158 @@
         </div>
         <div class="top-bar__actions" id="nav-auth">
             <p id="nav-username" class="muted"></p>
-            <button id="nav-logout" class="btn ghost small">Log out</button>
+            <div class="top-bar__cta">
+                <a href="settings.html" class="btn ghost small" id="nav-settings">Settings</a>
+                <button id="nav-logout" class="btn ghost small">Log out</button>
+            </div>
         </div>
     </nav>
 
     <header id="public-hero" class="hero hero--split">
         <div class="hero__content">
-            <p class="eyebrow">Study OS</p>
-            <h1>Build a calm archive for every studio crit and exam.</h1>
+            <p class="eyebrow">Studio OS</p>
+            <h1>Capture every studio idea with structure and proof.</h1>
             <p class="subtitle">
-                Draft categories for systems, furniture, materials, precedent studies, and keep their specs, prices,
-                and image references ready for your next review.
+                StudioNotebook organizes your work into <strong>Books</strong> → <strong>Pages</strong> → <strong>Notes</strong> with clear hierarchy. Add details, dimensions, and images for professional presentations.
             </p>
             <ul class="hero__bullets">
-                <li>Personal dashboards per user</li>
-                <li>Structured tables with upload-ready rows</li>
-                <li>Instant sync thanks to FastAPI + SQLite</li>
+                <li>Secure, private studio archives</li>
+                <li>Clear hierarchy: Books → Pages → Notes</li>
+                <li>Dimensions + image markers for detailed documentation</li>
+                <li>Crit Board summaries for review days</li>
             </ul>
         </div>
         <div class="auth-stack">
             <section class="auth-card">
                 <h2>Create an account</h2>
-                <p class="muted">One username is enough to keep your boards separate from classmates.</p>
+                <p class="muted">Use your studio email to keep projects private and recoverable.</p>
                 <form id="signup-form" class="form__stack">
                     <label>
                         Username
                         <input type="text" name="username" placeholder="eg. studio_ava" required />
                     </label>
                     <label>
+                        Email
+                        <input type="email" name="email" placeholder="you@school.edu" required />
+                    </label>
+                    <label>
                         Password
-                        <input type="password" name="password" placeholder="At least 6 characters" required />
+                        <input type="password" name="password" placeholder="At least 8 characters" required />
                     </label>
                     <button type="submit" class="btn primary">Sign up &amp; continue</button>
                 </form>
             </section>
-            <section class="auth-card">
+            <section class="auth-card" id="login-card">
                 <h2>Sign in</h2>
                 <p class="muted">Already built boards? Drop back into them here.</p>
                 <form id="login-form" class="form__stack">
                     <label>
-                        Username
-                        <input type="text" name="username" placeholder="Your username" required />
+                        Username or Email
+                        <input type="text" name="username_or_email" placeholder="@handle or you@school.edu" required />
                     </label>
                     <label>
                         Password
                         <input type="password" name="password" placeholder="Your password" required />
                     </label>
                     <button type="submit" class="btn secondary">Log in</button>
+                    <button type="button" id="forgot-password-toggle" class="btn ghost small">Forgot password?</button>
                 </form>
+                
+                <div id="reset-flow" class="hidden">
+                    <hr />
+                    <h3>Reset Password</h3>
+                    <p class="muted">Enter your email to receive a reset token.</p>
+                    <form id="reset-form" class="form__stack">
+                        <label>
+                            Email
+                            <input type="email" name="email" placeholder="you@school.edu" required />
+                        </label>
+                        <button type="submit" class="btn ghost">Send reset email</button>
+                    </form>
+                    <form id="reset-confirm-form" class="form__stack hidden">
+                        <label>
+                            Reset Code
+                            <input type="text" name="token" placeholder="Check your console/terminal" required />
+                        </label>
+                        <label>
+                            New Password
+                            <input type="password" name="password" placeholder="At least 8 characters" required />
+                        </label>
+                        <button type="submit" class="btn secondary">Update password</button>
+                    </form>
+                    <button type="button" id="reset-cancel" class="btn ghost small">Back to sign in</button>
+                </div>
             </section>
         </div>
     </header>
 
     <section id="workspace-hero" class="hero hero--dashboard hidden">
         <div class="hero__content">
-            <p class="eyebrow">Workspace live</p>
-            <h1>Glad you're back, <span id="hero-username">Designer</span>.</h1>
+            <p class="eyebrow">Studio Hub</p>
+            <h1>Welcome back, <span id="hero-username">Designer</span>.</h1>
             <p class="subtitle">
-                Keep your construction sets, material tests, and pricing snippets aligned. Track the flow of entries and
-                jump straight into the freshest board without digging through folders.
+                <strong>Book → Page → Note</strong> hierarchy keeps your work organized. Add detailed notes with dimensions and images for presentation-ready studio documentation.
             </p>
+            <div class="hierarchy-explainer">
+                <div class="hierarchy-step">
+                    <div class="hierarchy-icon">📚</div>
+                    <div>
+                        <strong>Books</strong>
+                        <p class="muted">Project collections</p>
+                    </div>
+                </div>
+                <div class="hierarchy-step">
+                    <div class="hierarchy-icon">📄</div>
+                    <div>
+                        <strong>Pages</strong>
+                        <p class="muted">Sheets inside a book</p>
+                    </div>
+                </div>
+                <div class="hierarchy-step">
+                    <div class="hierarchy-icon">📝</div>
+                    <div>
+                        <strong>Notes</strong>
+                        <p class="muted">Content cards with details</p>
+                    </div>
+                </div>
+            </div>
             <ul class="pulse-list">
                 <li>
-                    <strong>Latest board</strong>
-                    <p><span id="stat-highlight-name">No boards yet</span> · <span id="stat-highlight-count">0</span> entries captured.</p>
+                    <strong>Latest book</strong>
+                    <p><span id="stat-highlight-name">No books yet</span> · <span id="stat-highlight-count">0</span> pages captured.</p>
                 </li>
                 <li>
                     <strong>Status</strong>
-                    <p>FastAPI just synced your private archive. Nothing is shared unless you export it.</p>
+                    <p>Private by default. Export when you're ready to present or submit.</p>
                 </li>
             </ul>
             <div class="cta-row">
-                <a class="btn primary" href="#category-form">Add new board</a>
-                <button id="open-latest-board" class="btn ghost">Open latest board</button>
+                <a class="btn primary" href="#book-form">Add new book</a>
+                <button id="open-latest-book" class="btn ghost">Open latest book</button>
             </div>
         </div>
         <div class="workspace-panel">
             <div class="stat-grid">
                 <article class="stat-card">
-                    <p class="eyebrow">Categories</p>
-                    <p class="stat-card__value" id="stat-categories">0</p>
-                    <p class="muted">Active boards</p>
+                    <p class="eyebrow">Books</p>
+                    <p class="stat-card__value" id="stat-books">0</p>
+                    <p class="muted">Project collections</p>
                 </article>
                 <article class="stat-card">
-                    <p class="eyebrow">Entries</p>
-                    <p class="stat-card__value" id="stat-entries">0</p>
-                    <p class="muted">Specs + imagery</p>
+                    <p class="eyebrow">Pages</p>
+                    <p class="stat-card__value" id="stat-pages">0</p>
+                    <p class="muted">Sheets with notes</p>
                 </article>
                 <article class="stat-card">
                     <p class="eyebrow">Focus</p>
                     <p class="stat-card__value" id="stat-focus-count">0</p>
-                    <p class="muted" id="stat-focus-label">Start your first board</p>
+                    <p class="muted" id="stat-focus-label">Start your first book</p>
                 </article>
             </div>
             <div class="workspace-note">
-                <p class="eyebrow">Field note</p>
+                <p class="eyebrow">Tip</p>
                 <p id="workspace-note-body">
-                    Build theme-based boards (structure, envelope, interiors) to keep juries oriented during crits.
+                    Use clear titles for books and pages. Add dimensions and notes to make your documentation presentation-ready.
                 </p>
             </div>
         </div>
@@ -122,10 +177,10 @@
     <main class="main-flow">
         <section id="auth-invite" class="panel">
             <p class="eyebrow">Workspace locked</p>
-            <h3>Log in to reveal your categories.</h3>
+            <h3>Log in to reveal your studio books.</h3>
             <p class="subtitle">
-                Every plan board is private to its owner. Once authenticated, this section morphs into your personal
-                control center with forms and tables.
+                Every book is private to its owner. Once authenticated, this section becomes your personal studio
+                command center.
             </p>
         </section>
 
@@ -135,31 +190,70 @@
                     <p class="eyebrow">Workspace</p>
                     <h3 id="app-welcome">Welcome back</h3>
                 </div>
-                <button id="refresh-categories" class="btn ghost">Refresh</button>
+                <button id="refresh-books" class="btn ghost">Refresh</button>
             </div>
             <div class="app-shell__grid">
-                <form id="category-form" class="form__stack card">
-                    <h4>Add a Category</h4>
+                <form id="book-form" class="form__stack card">
+                    <h4>Add a Book</h4>
                     <label>
-                        Category Name
-                        <input type="text" name="name" placeholder="eg. Concrete Mixes" required />
+                        Book Title
+                        <input type="text" name="title" placeholder="eg. Civic Library" required />
                     </label>
-                    <button type="submit" class="btn primary">Save Category</button>
-                    <p class="form__hint">Use short, action-oriented titles so they remain scannable.</p>
+                    <label>
+                        Sector (optional)
+                        <input type="text" name="sector" placeholder="eg. Public, Residential" />
+                    </label>
+                    <label>
+                        Description (optional)
+                        <textarea name="description" rows="3" placeholder="Brief for the studio project."></textarea>
+                    </label>
+                    <button type="submit" class="btn primary">Save Book</button>
+                    <p class="form__hint">Use project names that will look good on a crit board export.</p>
                 </form>
 
                 <div>
                     <div class="panel__subheader">
-                        <p class="eyebrow">Your boards</p>
-                        <h4>Tap to open the detailed table.</h4>
+                        <p class="eyebrow">Your books</p>
+                        <h4>Tap to open the tile pages.</h4>
                     </div>
-                    <div id="category-list" class="category-grid"></div>
+                    <div id="book-list" class="category-grid"></div>
                 </div>
+            </div>
+        </section>
+
+        <section id="dashboard-tools" class="panel app-shell hidden">
+            <div class="panel__header">
+                <div>
+                    <p class="eyebrow">Studio Alerts</p>
+                    <h3>Deadlines and reminders</h3>
+                </div>
+            </div>
+            <div class="app-shell__grid">
+                <div>
+                    <div class="panel__subheader">
+                        <p class="eyebrow">Upcoming</p>
+                        <h4>Scheduled reminders</h4>
+                    </div>
+                    <div id="reminder-list" class="reminder-list"></div>
+                </div>
+                <form id="reminder-form" class="form__stack card">
+                    <h4>Add Reminder</h4>
+                    <label>
+                        Title
+                        <input type="text" name="title" placeholder="eg. Pin-up for studio" required />
+                    </label>
+                    <label>
+                        Remind at
+                        <input type="datetime-local" name="remind_at" required />
+                    </label>
+                    <button type="submit" class="btn primary">Schedule</button>
+                    <p class="form__hint">Browser notifications will be enabled later in v1.</p>
+                </form>
             </div>
         </section>
     </main>
 
-    <template id="category-card-template">
+    <template id="book-card-template">
         <article class="category-card">
             <div>
                 <p class="category-card__title"></p>

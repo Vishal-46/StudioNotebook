@@ -128,6 +128,10 @@ a {
     gap: 1rem;
 }
 
+.auth-card--mini {
+    border: 1px dashed var(--border);
+}
+
 .stat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -249,6 +253,18 @@ main {
     margin-bottom: 1rem;
 }
 
+.reminder-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.reminder-card {
+    background: #fffefa;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
 .panel__header {
     display: flex;
     justify-content: space-between;
@@ -280,6 +296,129 @@ main {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
 }
+
+.tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem;
+}
+
+.hierarchy-explainer {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(2, 102, 112, 0.04);
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+}
+
+.hierarchy-step {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex: 1;
+}
+
+.hierarchy-icon {
+    font-size: 1.5rem;
+    background: #fff;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.tile-card {
+    background: var(--panel);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden; /* Prevent content overflow */
+    position: relative;
+}
+
+.tile-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.tile-card__title {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+    color: var(--accent);
+}
+
+.tile-card__note {
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word; /* Fix overflow */
+}
+
+.tile-card__dimensions {
+    display: grid;
+    gap: 0.6rem;
+    background: #f9f9f7;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    border-left: 3px solid var(--accent-soft);
+}
+
+.dimension-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.dimension-label {
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.dimension-value {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.tile-card__actions {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.6rem;
+}
+
+/* Settings Page Styles */
+.settings-container {
+    max-width: 800px;
+    margin: 2rem auto;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
+}
+
 
 .category-card {
     border: 1px solid var(--border);
@@ -339,6 +478,8 @@ main {
     color: var(--accent);
     border: 1px solid var(--border);
 }
+
+/* removed duplicate auth-card--mini block */
 
 .btn.icon {
     border-radius: 8px;
@@ -637,7 +778,74 @@ tr:last-child td {
         gap: 0.3rem;
     }
 
-    tbody td::before {
-        flex: 0 0 auto;
+/* Responsiveness and Mobile Polish */
+@media (max-width: 768px) {
+    .top-bar {
+        padding: 0.6rem 1rem;
+        flex-direction: column;
+        gap: 0.6rem;
+        text-align: center;
+    }
+    
+    .brand {
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .top-bar__actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .hero, .sub-hero {
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+
+    .grid-two {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .panel {
+        padding: 1.2rem;
+    }
+
+    .category-grid, #page-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Fix image marker responsiveness */
+    .image-container {
+        overflow-x: auto;
+    }
+
+    .marker {
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
+    }
+
+    /* Modal polish */
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .top-bar__cta {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .hero__panel {
+        padding: 1rem;
     }
 }

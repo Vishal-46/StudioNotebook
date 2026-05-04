@@ -125,3 +125,84 @@ graph TD
 - Documenting every incident prevents phantom bugs next semester. This notebook is the canonical memory of v1.1.
 
 **Next release target (v1.2 preview):** build on this base with entry analytics, exporting boards, and stronger session hygiene—without rewriting the fundamentals captured here.
+
+---
+
+## v1.2 Architecture Decision Set
+
+This is the early-stage structure we should freeze before adding more features.
+
+### Product Core We Are Keeping
+- A private research archive for architecture and design work.
+- Boards remain the main unit of organization.
+- Entries continue to hold specs, notes, prices, and images.
+- The current user flow stays simple: sign up, sign in, land in a workspace, manage boards.
+
+### What We Should Standardize Now
+1. **Backend becomes modular FastAPI**
+      - Split the backend into `app/core`, `app/db`, `app/models`, `app/schemas`, `app/services`, and `app/routers`.
+      - Keep FastAPI as the API layer; do not rewrite the backend stack unless a later bottleneck forces it.
+      - Add route versioning from the start, such as `/api/v1/...`.
+
+2. **Database moves to managed Postgres for production**
+      - Use PostgreSQL on a free tier host such as Supabase.
+      - Keep SQLite only for lightweight local development and quick testing.
+      - Add a local Postgres option later if we want parity between development and production.
+
+3. **Authentication must include recovery**
+      - Login and signup are not enough; we also need forgot-password and reset-password.
+      - Add `email` to the user record so password recovery can actually work.
+      - Add password reset tokens with expiration and one-time use.
+      - Keep session handling short-lived and revocable instead of permanent tokens.
+
+4. **Frontend stays simple for now**
+      - Keep the current HTML, CSS, and vanilla JS app until the data model and auth flow are stable.
+      - Run frontend locally with a static server and backend locally with uvicorn.
+      - Avoid a framework migration before the backend and auth rules are settled.
+
+5. **Uploads need a real storage plan**
+      - Do not rely on local disk uploads as the final design.
+      - Use object storage that matches the free-tier strategy, with the backend storing only file references.
+
+### Recommended Free-Tier Stack
+| Layer | Recommendation | Reason |
+| --- | --- | --- |
+| Frontend hosting | Vercel free tier or equivalent static host | Simple deploy path for the current static UI |
+| Backend hosting | Render free tier or equivalent Python host | Fits FastAPI without extra infrastructure work |
+| Database hosting | Supabase Postgres free tier | Managed Postgres, backups, and a clean upgrade path |
+| Email for reset flow | Free transactional email tier | Needed for forgot-password and verification messages |
+| Object storage | Supabase Storage or similar free tier | Keeps uploads out of the app server filesystem |
+
+### Backend Layout We Should Move Toward
+```text
+backend/
+  app/
+       core/
+       db/
+       models/
+       schemas/
+       services/
+       routers/
+       main.py
+```
+
+### Auth Flow We Should Aim For
+1. User signs up with username, email, and password.
+2. Backend hashes the password and creates the user.
+3. Backend creates a recovery-ready account state.
+4. User logs in and receives a session that can be revoked.
+5. If the user forgets the password, they request a reset link.
+6. Reset token is checked once, then the password is changed and the token expires.
+
+### Build Order
+1. Freeze the data model and auth rules.
+2. Move the backend into modules and add `/api/v1`.
+3. Switch the production database target to Postgres.
+4. Add forgot-password and reset-password endpoints.
+5. Then add feature work like analytics, exports, tagging, and richer dashboards.
+
+### Non-Negotiables Before More Features
+- No new feature work before password recovery exists.
+- No production rollout on SQLite.
+- No secret values committed into the repo.
+- No frontend framework migration until the backend contract is stable.

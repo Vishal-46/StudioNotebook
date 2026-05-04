@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Book Detail | StudioNotebook</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="book-detail">
+    <nav class="top-bar">
+        <div class="brand">
+            <img src="StudioNotebook_Logo.png" alt="StudioNotebook logo" class="brand__logo" />
+            <div>
+                <p class="eyebrow">Studio Notebook</p>
+                <strong>Architecture Notes</strong>
+            </div>
+        </div>
+        <div class="top-bar__actions" id="nav-auth">
+            <p id="nav-username" class="muted"></p>
+            <div class="top-bar__cta">
+                <a href="settings.html" class="btn ghost small">Settings</a>
+                <a href="./index.html" class="btn ghost small">Dashboard</a>
+                <button id="nav-logout" class="btn ghost small">Log out</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="sub-hero">
+        <div class="header-nav">
+            <a href="index.html" class="nav-link">← Back to Dashboard</a>
+        </div>
+        <div>
+            <p class="eyebrow">Book</p>
+            <h1 id="book-title">Loading...</h1>
+            <p class="subtitle" id="book-summary">Fetching pages and notes. Hang tight for a moment.</p>
+        </div>
+        <div class="hero__panel">
+            <p class="eyebrow">Hierarchy</p>
+            <p class="muted"><strong>Book</strong> (Collection) > <strong>Page</strong> (Sheet) > <strong>Notes</strong> (Cards)</p>
+            <div class="cta-row">
+                <button id="download-report" class="btn secondary">Download CSV Report</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="grid-two">
+        <section class="panel">
+            <div class="panel__header">
+                <div>
+                    <p class="eyebrow">Pages in this Book</p>
+                    <h3>Content & Documentation</h3>
+                </div>
+                <div class="panel__actions">
+                    <button id="refresh-pages" class="btn ghost small">Refresh</button>
+                </div>
+            </div>
+            <div id="page-grid" class="tile-grid"></div>
+        </section>
+
+        <section class="panel sticky">
+            <h3 id="page-form-title">Create New Page</h3>
+            <p class="muted" style="margin-bottom: 1rem;">Add a new sheet to this book to store related notes.</p>
+            <form id="page-form" class="form__stack" enctype="multipart/form-data">
+                <input type="hidden" name="pageId" id="page-id" />
+                <label>
+                    Page Title
+                    <input type="text" name="title" placeholder="eg. Material Selection, Site Analysis" required />
+                </label>
+                <label>
+                    Note Content
+                    <textarea name="note" rows="5" placeholder="Add detailed notes, descriptions, or observations. Use clear language for better documentation."></textarea>
+                </label>
+                <div class="form-row">
+                    <label>
+                        Cost (optional)
+                        <input type="number" step="0.01" name="cost" placeholder="eg. 1200" />
+                    </label>
+                    <label>
+                        Tag/Category (optional)
+                        <input type="text" name="perk" placeholder="eg. Critical, Draft, Final" />
+                    </label>
+                </div>
+                <label>
+                    Timestamp
+                    <input type="datetime-local" name="page_timestamp" />
+                </label>
+                <label>
+                    Visual Evidence (Images)
+                    <input type="file" name="images" id="page-images" accept="image/*" multiple />
+                    <span class="form__hint">Capture photos of your sketches, models, or site visits.</span>
+                </label>
+                <div class="cta-row">
+                    <button type="submit" class="btn primary" id="page-submit-btn">Save Page</button>
+                    <button type="button" class="btn ghost" id="page-cancel-btn">Cancel</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <template id="page-card-template">
+        <article class="tile-card">
+            <header class="tile-card__header">
+                <h4 class="tile-card__title"></h4>
+                <p class="muted tile-card__meta"></p>
+            </header>
+            <div class="tile-card__content">
+                <p class="tile-card__note"></p>
+            </div>
+            <div class="tile-card__dimensions"></div>
+            <div class="tile-card__tags"></div>
+            <div class="tile-card__images"></div>
+            <div class="tile-card__actions"></div>
+        </article>
+    </template>
+            <div class="tile-card__images"></div>
+            <div class="tile-card__actions"></div>
+        </article>
+    </template>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js" type="module"></script>
+</body>
+</html>

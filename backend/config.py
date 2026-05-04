@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = ""
     
     # Mail Settings
-    MAIL_USERNAME: str = ""
-    MAIL_PASSWORD: str = ""
-    MAIL_FROM: str = ""
+    MAIL_USERNAME: str = "placeholder@example.com"
+    MAIL_PASSWORD: str = "placeholder"
+    MAIL_FROM: str = "placeholder@example.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "smtp.gmail.com"
     MAIL_STARTTLS: bool = True

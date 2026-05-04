@@ -1,10 +1,10 @@
 const API_BASE = (() => {
-    const FALLBACK = "https://studionotebook.onrender.com";
-    if (window.location.protocol.startsWith("http")) {
-        const host = window.location.hostname || "127.0.0.1";
-        return `${window.location.protocol}//${host}:8000`;
+    const LOCAL = "http://127.0.0.1:8000";
+    const REMOTE = "https://studionotebook.onrender.com";
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        return LOCAL;
     }
-    return FALLBACK;
+    return REMOTE;
 })();
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
 const STORAGE_USER_KEY = "studio-notes-user";

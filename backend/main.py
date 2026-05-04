@@ -65,13 +65,19 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_TTL = timedelta(days=7)
 RESET_TTL = timedelta(hours=2)
 
-Base.metadata.create_all(bind=engine)
+# Only create tables locally or if not using Supabase
+if not os.getenv("SUPABASE_URL"):
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="StudioNotebook API", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=[
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "https://studio-notebook.vercel.app", # Replace with your actual Vercel URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
